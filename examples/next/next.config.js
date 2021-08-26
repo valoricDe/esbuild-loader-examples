@@ -12,28 +12,25 @@ function addEsbuildMinify(config, options) {
 }
 
 function addEsbuildLoader(config, options) {
-	const jsRule = config.module.rules.find(rule => rule.test && rule.test.test('.tsx'));
-	if (!jsRule) throw new Error('No js Loader found!');
+    const jsRule = config.module.rules.find(rule => rule.test && rule.test.test('.tsx'));
+    if (!jsRule) throw new Error('No js Loader found!');
 
-	if (config.name === 'client') {
-		if (
-			jsRule.use.length !== 2 ||
-			!jsRule.use[0].includes('@next/react-refresh-utils/loader.js') ||
-			!jsRule.use[1].loader?.includes('next/dist/build/babel/loader/index.js')
-		)
-			throw new Error('webpack\'s "config.module.rules.use" structure changed. Please adopt');
+    if (jsRule.use.loader) {
+        jsRule.use.loader = 'esbuild-loader';
+        jsRule.use.options = options;
+        return;
+    }
 
-		const use = jsRule.use[1]
-		use.loader = 'esbuild-loader';
-		use.options = options;
-		return;
-	}
-	if (config.name === 'server') {
-		jsRule.use.loader = 'esbuild-loader';
-		jsRule.use.options = options;
-		return;
-	}
-	throw new Error('Unknown build name');
+    if (
+        jsRule.use.length !== 2 ||
+        !convertPath(jsRule.use[0]).includes('@next/react-refresh-utils/loader.js') ||
+        !convertPath(jsRule.use[1].loader || '').includes('next/dist/build/babel/loader/index.js')
+    )
+        throw new Error('webpack\'s "config.module.rules.use" structure changed. Please adopt');
+
+    const use = jsRule.use[1];
+    use.loader = 'esbuild-loader';
+    use.options = options;
 }
 
 module.exports = {
